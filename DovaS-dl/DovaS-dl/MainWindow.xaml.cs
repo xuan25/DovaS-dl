@@ -75,6 +75,7 @@ namespace DovaS_dl
             ProcessThread = new Thread(() =>
             {
                 uint i = startId;
+                int numAudioAttempts = 0;
                 while (i <= endId)
                 {
                     Dispatcher.Invoke(() =>
@@ -84,16 +85,43 @@ namespace DovaS_dl
 
                     try
                     {
+                        numAudioAttempts++;
                         List<TrackFileDownloader> trackFileDownloaders = GetDownloadOptions(i);
                         if (trackFileDownloaders != null)
                         {
                             foreach (TrackFileDownloader trackFileDownloader in trackFileDownloaders)
                             {
-                                Dispatcher.Invoke(() =>
+                                int numTrackAttempts = 0;
+                                while (true)
                                 {
-                                    CurrentIdBox.Text = string.Format("{0} - {1} Downloading file", i, trackFileDownloader.TrackId);
-                                });
-                                trackFileDownloader.Download("Downloads");
+                                    numTrackAttempts++;
+
+                                    string msg = $"{i} - {trackFileDownloader.TrackId} Downloading file";
+                                    if (!(numAudioAttempts == 1 && numTrackAttempts == 1))
+                                    {
+                                        msg += $" (Attempts {numAudioAttempts}-{numTrackAttempts})";
+                                    }
+                                    Dispatcher.Invoke(() =>
+                                    {
+                                        CurrentIdBox.Text = msg;
+                                    });
+
+                                    try
+                                    {
+                                        trackFileDownloader.Download("Downloads");
+                                        break;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine(ex);
+                                        if (numTrackAttempts > 10)
+                                        {
+                                            throw ex;
+                                        }
+
+                                        Thread.Sleep(5 * 1000);
+                                    }
+                                }
                             }
                         }
                         else
@@ -102,11 +130,12 @@ namespace DovaS_dl
                         }
 
                         i++;
+                        numAudioAttempts = 0;
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine(ex);
-                        Thread.Sleep(5000);
+                        Thread.Sleep(5 * 1000);
                     }
                 }
                 Dispatcher.Invoke(() =>
@@ -295,7 +324,7 @@ namespace DovaS_dl
                                 }
 
                                 // Find filename
-                                Match match = Regex.Match(headers["Content-Disposition"], "attachment; filename=\"(?<Filename>.+?)\"");
+                                Match match = Regex.Match(headers["content-disposition"], "attachment; filename=\"(?<Filename>.+?)\"");
                                 string filename = string.Format("{0} - {1}", FileId, match.Groups["Filename"].Value);
 
                                 // Prepare directory
@@ -370,7 +399,7 @@ namespace DovaS_dl
                 fileRequest.ReadWriteTimeout = 5000;
                 fileRequest.Method = "POST";
                 fileRequest.ContentType = "application/x-www-form-urlencoded";
-                fileRequest.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36";
+                fileRequest.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36";
 
                 CookieContainer cookieContainer = new CookieContainer();
                 cookieContainer.Add(DownloadCookies);
