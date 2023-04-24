@@ -324,7 +324,8 @@ namespace DovaS_dl
                                 }
 
                                 // Find filename
-                                Match match = Regex.Match(headers["content-disposition"], "attachment; filename=\"(?<Filename>.+?)\"");
+                                Dictionary<string, string> headersLower = headers.ToDictionary(kvp => kvp.Key.ToLower(), kvp => kvp.Value);
+                                Match match = Regex.Match(headersLower["content-disposition"], "attachment; filename=\"(?<Filename>.+?)\"");
                                 string filename = string.Format("{0} - {1}", FileId, match.Groups["Filename"].Value);
 
                                 // Prepare directory
